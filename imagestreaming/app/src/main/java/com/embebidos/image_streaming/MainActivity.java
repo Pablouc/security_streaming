@@ -28,6 +28,8 @@ public class MainActivity extends AppCompatActivity {
    private static final String TAG = "APIresponse";
     private static final int INTERVAL_MS = 1000; // Interval between each GET request in milliseconds
     Button alert_btn;
+
+    Button picture_btn;
     private ImageView imageView;
     private Handler handler;
 
@@ -37,18 +39,28 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //UdpClient = new UdpClient();
-        //UdpClient.startListening();
+
         imageView = findViewById(R.id.imageView);
         handler = new Handler();
 
         alert_btn = (Button) findViewById(R.id.alert_btn);
+
 
         alert_btn.setOnClickListener(v -> {
             performPostRequest(true);
             //Toast.makeText(getBaseContext(),"Se ha generado una alerta", Toast.LENGTH_SHORT).show();
 
         });
+
+        picture_btn = (Button) findViewById(R.id.takePic);
+
+
+        picture_btn.setOnClickListener(v -> {
+            picturePostRequest();
+            //Toast.makeText(getBaseContext(),"Se ha generado una alerta", Toast.LENGTH_SHORT).show();
+
+        });
+
         // Schedule a task to fetch the image every 1 second
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
@@ -68,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // Perform the GET request to retrieve the image
                     byte[] imageData = HttpUtils.get("http://192.168.18.21:5000/image");
+
 
                     // Update the UI on the main thread
                     handler.post(new Runnable() {
@@ -142,6 +155,50 @@ public class MainActivity extends AppCompatActivity {
                         });
                     } else {
                         Log.d(TAG, "Error updating signal");
+                    }
+
+                    connection.disconnect();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void picturePostRequest() {
+        Executor executor = Executors.newSingleThreadExecutor();
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                String apiUrl = "http://192.168.18.21:5000/picture"; // Replace with your Flask API endpoint
+
+                try {
+                    URL url = new URL(apiUrl);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json");
+                    connection.setDoOutput(true);
+
+                    int responseCode = connection.getResponseCode();
+
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        // Handle the successful response here
+                        // For example, display a Toast message
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "POST request successful", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    } else {
+                        // Handle the unsuccessful response here
+                        // For example, display an error message
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "POST request failed", Toast.LENGTH_SHORT).show();
+                            }
+                        });
                     }
 
                     connection.disconnect();

@@ -1,3 +1,6 @@
 *.swp
 *.o
 *.a
+*.ppm
+*.jpg
+__pycache__/

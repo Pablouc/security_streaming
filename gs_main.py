@@ -6,6 +6,13 @@ gi.require_version('Gst', '1.0')
 gi.require_version('GLib', '2.0')
 from gi.repository import  Gst,GLib
 
+def convert_ppm_to_jpg(input_path, output_path):
+    # Open the PPM image
+    image = Image.open(input_path)
+    
+    # Save the image in JPG format
+    image.save(output_path, 'JPEG')
+
 def convert_jpg_to_ppm(jpg_filename, ppm_filename):
     image = Image.open(jpg_filename)
     image.save(ppm_filename, format='PPM')
@@ -24,8 +31,8 @@ def bus_call(bus, message, loop):
 
 def capture_img():
     Gst.init(None)
-    pipeline_1 = 'v4l2src device=/dev/video2 num-buffers=1 ! jpegenc ! filesink location=picture1.jpg'
-    pipeline_2 = 'v4l2src device=/dev/video2 num-buffers=1 ! jpegenc ! filesink location=picture2.jpg'
+    pipeline_1 = 'v4l2src device=/dev/video0 num-buffers=1 ! jpegenc ! filesink location=picture1.jpg'
+    pipeline_2 = 'v4l2src device=/dev/video0 num-buffers=1 ! jpegenc ! filesink location=picture2.jpg'
 
     pipeline1 = Gst.parse_launch(pipeline_1)
     pipeline2 = Gst.parse_launch(pipeline_2)
@@ -48,6 +55,7 @@ def capture_img():
     bus = pipeline2.get_bus()
     bus.add_signal_watch()
     bus.connect("message", bus_call, loop)
+    loop.quit()
 
     # start play back and listed to events
     pipeline2.set_state(Gst.State.PLAYING)
@@ -55,6 +63,8 @@ def capture_img():
 
     # cleanup
     pipeline1.set_state(Gst.State.NULL)
+    pipeline2.set_state(Gst.State.NULL)
+    loop.quit()
 
     imgs = ["picture1.jpg","picture2.jpg"] 
 
@@ -117,7 +127,6 @@ def multifocus_fusion(image1, image2):
         loop.run()
     except:
         pass
-
     # cleanup
     pipeline.set_state(Gst.State.NULL)"""
 
@@ -145,15 +154,13 @@ def algorithm_basic(img1,img2):
         exit(1)
     fused_image = multifocus_fusion(image1, image2)
     write_ppm_image("fused_image2.ppm", fused_image)
-    
+    convert_ppm_to_jpg("fused_image2.ppm", "image.jpg")
 
-def main():
+
+def takePicture():
     img1, img2 = capture_img()
     convert_jpg_to_ppm(img1, "out1.ppm")
     convert_jpg_to_ppm(img2, "out2.ppm")
     algorithm_openmp("out1.ppm","out2.ppm")
     algorithm_basic("out1.ppm","out2.ppm")
-    
 
-main()
-    

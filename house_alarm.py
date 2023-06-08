@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, send_file
-
+import gs_main
 
 app = Flask('house_alarm')
 
@@ -18,6 +18,13 @@ def update_signal():
     global signal
     signal = request.json.get('signal', False)
     return jsonify({'signal': signal}), 201
+    
+@app.route('/picture', methods=['POST'])
+def call_gs_main():
+    gs_main.takePicture()  # Call the main function from gs_main.py
+    return 'Success', 200  # Return a response with a 200 status code
+
+
 
 
 # Run the application
