@@ -1,36 +1,24 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
+
 
 app = Flask('house_alarm')
 
-# Sample data - you can replace this with your own data source
-books = [
-    {
-        'id': 1,
-        'title': 'Book 1',
-        'author': 'Author 1'
-    },
-    {
-        'id': 2,
-        'title': 'Book 2',
-        'author': 'Author 2'
-    }
-]
+signal = False  # Initial signal value
 
-# GET method - retrieve all books
-@app.route('/books', methods=['GET'])
-def get_books():
-    return jsonify(books)
+# GET method - retrieve the image
+@app.route('/image', methods=['GET'])
+def get_image():
+    
+    image_path = './image.jpg'
+    return send_file(image_path, mimetype='image/ppm')
 
-# POST method - add a new book
-@app.route('/books', methods=['POST'])
-def add_book():
-    new_book = {
-        'id': request.json['id'],
-        'title': request.json['title'],
-        'author': request.json['author']
-    }
-    books.append(new_book)
-    return jsonify(new_book), 201
+# POST method - update the signal
+@app.route('/signal', methods=['POST'])
+def update_signal():
+    global signal
+    signal = request.json.get('signal', False)
+    return jsonify({'signal': signal}), 201
+
 
 # Run the application
 if __name__ == '__main__':
