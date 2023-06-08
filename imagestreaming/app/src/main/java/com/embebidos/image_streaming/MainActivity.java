@@ -2,9 +2,11 @@ package com.embebidos.image_streaming;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -13,16 +15,21 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.io.IOException;
-
+import com.bumptech.glide.Glide;
 
 
 public class MainActivity extends AppCompatActivity {
     //private UdpClient UdpClient;
    private static final String TAG = "APIresponse";
+    private static final int INTERVAL_MS = 1000; // Interval between each GET request in milliseconds
     Button alert_btn;
+    private ImageView imageView;
+    private Handler handler;
 
 
     @Override
@@ -32,31 +39,60 @@ public class MainActivity extends AppCompatActivity {
 
         //UdpClient = new UdpClient();
         //UdpClient.startListening();
+        imageView = findViewById(R.id.imageView);
+        handler = new Handler();
 
         alert_btn = (Button) findViewById(R.id.alert_btn);
 
         alert_btn.setOnClickListener(v -> {
-            performPostRequest();
+            performPostRequest(true);
             //Toast.makeText(getBaseContext(),"Se ha generado una alerta", Toast.LENGTH_SHORT).show();
 
         });
+        // Schedule a task to fetch the image every 1 second
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                fetchImage();
+            }
+        }, 0, INTERVAL_MS);
 
     }
 
-   /* @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (UdpClient != null) {
-            UdpClient.stopListening();
-        }
-    }*/
 
-   private void performPostRequest() {
+    private void fetchImage() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Perform the GET request to retrieve the image
+                    byte[] imageData = HttpUtils.get("http://192.168.18.21:5000/image");
+
+                    // Update the UI on the main thread
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Display the image using Glide library
+                            Glide.with(MainActivity.this)
+                                    .load(imageData)
+                                    .into(imageView);
+                        }
+                    });
+                } catch (IOException e) {
+                    Log.e(TAG, "Error while fetching image: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+   private void performPostRequest(boolean signal) {
         Executor executor = Executors.newSingleThreadExecutor();
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                String apiUrl = "http://192.168.100.5:5000/books"; // Replace with your Flask API endpoint
+                String apiUrl = "http://192.168.18.21:5000/signal"; // Replace with your Flask API endpoint
 
                 try {
 
@@ -67,21 +103,14 @@ public class MainActivity extends AppCompatActivity {
                     connection.setDoOutput(true);
 
 
-                    String requestBody = "{\"id\": 3, \"title\": \"Book 3\", \"author\": \"Author 3\"}"; // JSON request body
+                    String requestBody = "{\"signal\": " + signal + "}"; // JSON request body
 
                     Log.d(TAG, "Nivel 1");
                     try {
-                        Log.d(TAG, "Me mame 1");
                         OutputStream outputStream = connection.getOutputStream();
-                        Log.d(TAG, "Me mame 2");
                         outputStream.write(requestBody.getBytes());
-                        Log.d(TAG, "Me mame 3");
                         outputStream.flush();
-
-                        Log.d(TAG, "Me mame 4");
                         outputStream.close();
-
-                        Log.d(TAG, "Me mame 1.1");
 
                         // Rest of the code
                     } catch (IOException e) {
@@ -90,12 +119,10 @@ public class MainActivity extends AppCompatActivity {
                     }
 
 
-                    Log.d(TAG, "mame new ");
+
                     int responseCode = connection.getResponseCode();
 
-                    Log.d(TAG, "responde code: " + Integer.toString(responseCode));
                     if (responseCode == HttpURLConnection.HTTP_CREATED) {
-                        Log.d(TAG, "Me mame 4");
                         BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                         StringBuilder response = new StringBuilder();
                         String line;
@@ -114,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                     } else {
-                        Log.d(TAG, "Me mame 5");
+                        Log.d(TAG, "Error updating signal");
                     }
 
                     connection.disconnect();
